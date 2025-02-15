@@ -1,0 +1,296 @@
+clear all;
+clc
+
+% ThingSpeak configurations
+thingSpeakChannelID = 1950281;
+thingSpeakWriteKey  = 'EULUHA14B0DHD01D';
+thingSpeakDataTimer = 0;
+
+a = arduino("COM4", "Uno", Libraries = ["ShiftRegister","Ultrasonic"]);
+us = ultrasonic(a,'D9','D12'); % Setting pins for Ultrasonic sensor
+speed = 0; % Variable to calculate speed
+
+i = 0;
+cruiseControl = 0;
+adaptiveCruise = 0;
+CruiseSpeed = 0;
+AdaptiveSpeed = 0;   
+while true
+  while true
+    incBtn = readVoltage(a,'A0');
+    decBtn = readVoltage(a,'A1');
+    CCBtn = readVoltage(a, 'A2');
+    cancelBtn = readVoltage(a,'A3');
+    AdaptiveBtn = readVoltage(a, 'A4');    
+    if(incBtn>=4.5) % Increase Button pressed
+      i = 1;
+      break;
+    elseif(decBtn>=4.5) % Decrease Button Pressed
+      i = 2;
+      break;
+    elseif(CCBtn>=4.5) % Cruise Control Button Pressed
+      adaptiveCruise = 0;
+      cruiseControl = 1; % Setting cruise Control
+      CruiseSpeed = speed; % Setting cruise Control Speed to current Speed
+      break;
+    elseif(AdaptiveBtn>=4.5) % Adaptive Cruise Control Button Pressed
+      cruiseControl = 0;
+      adaptiveCruise = 1; % Setting Adaptive Cruise Control
+      AdaptiveSpeed = speed; % Setting Adaptive Cruise Control to Current Speed(Flag)
+      break;
+    elseif(cancelBtn>=4.5) % Cancel Button Pressed
+      cruiseControl = 0; % Cancel Cruise Control Mode
+      adaptiveCruise = 0; % Cancel Adaptive Cruise Control Mode
+      AdaptiveSpeed = 0; % Set Adaptive Cruise Control Speed to 0
+      CruiseSpeed = 0; % Set Cruise Control Speed to 0
+      break;
+    else
+      i = 0; % If none of the button will be pressed
+      break;
+    end
+  end
+
+  switch i % Swtch-Case
+    case 1 % If Input will be 1 (Increase Speed)
+      if (adaptiveCruise == 0)
+          speed = speed + 1; % Increase flag by 1
+      end
+      if (cruiseControl == 1)
+          CruiseSpeed = speed;
+      end
+    case 2 % If Input will be 2 (Decrease Speed)
+      if (speed > 0 && adaptiveCruise == 0) % Checking if the speed is greater than 0
+        speed = speed - 1; % Decrease flag by 1
+      end
+      if (cruiseControl == 1)
+          CruiseSpeed = speed;
+      end
+    otherwise % If Input will be 0
+      if(speed > 0 && cruiseControl == 0 && adaptiveCruise == 0) % If cruise Control and adaptive cruise control mode are not set
+        speed = speed - 1; % Decrease counter by 1
+      elseif(adaptiveCruise == 1) % If Adaptive Cruise Control mode is ON
+        sensorValue = round(readDistance(us)*343/2,0); % Read Sensor Value
+        disp(sensorValue);
+        if(sensorValue < 30 && speed > 0) % Object is detected in ultrasonic sensor
+          speed = speed - 1; % Decrease flag by 1
+        elseif(sensorValue > 30 && speed < AdaptiveSpeed) % If object is removed in front of ultrasonic sensor
+          speed = speed + 1; % increase flag by 1
+        end
+      end
+  end
+    % resetting the digits
+  writeDigitalPin(a, 'D10',1);
+  writeDigitalPin(a, 'D11', 1);
+  % breaking digits into first and second digit
+  if speed>=10
+      second_digit=round(rem(speed,10),0);
+      first_digit=round((speed-second_digit)/10,0);
+  else
+      second_digit=speed;
+      first_digit=0;
+  end
+
+  % printing first digit
+  if first_digit==0
+    writeDigitalPin(a, 'D2', 1);
+    writeDigitalPin(a, 'D3', 1);
+    writeDigitalPin(a, 'D4', 1);  
+    writeDigitalPin(a, 'D5', 1);  
+    writeDigitalPin(a, 'D6', 1);  
+    writeDigitalPin(a, 'D7', 1);  
+    writeDigitalPin(a, 'D8', 0);
+
+  elseif first_digit==1
+    writeDigitalPin(a, 'D2', 0);
+    writeDigitalPin(a, 'D3', 1);
+    writeDigitalPin(a, 'D4', 1);  
+    writeDigitalPin(a, 'D5', 0);  
+    writeDigitalPin(a, 'D6', 0);  
+    writeDigitalPin(a, 'D7', 0);  
+    writeDigitalPin(a, 'D8', 0);
+
+  elseif first_digit==2
+    writeDigitalPin(a, 'D2', 1);
+    writeDigitalPin(a, 'D3', 1);
+    writeDigitalPin(a, 'D4', 0);  
+    writeDigitalPin(a, 'D5', 1);  
+    writeDigitalPin(a, 'D6', 1);  
+    writeDigitalPin(a, 'D7', 0);  
+    writeDigitalPin(a, 'D8', 1);
+
+  elseif first_digit==3
+    writeDigitalPin(a, 'D2', 1);
+    writeDigitalPin(a, 'D3', 1);
+    writeDigitalPin(a, 'D4', 1);   
+    writeDigitalPin(a, 'D5', 1);  
+    writeDigitalPin(a, 'D6', 0);  
+    writeDigitalPin(a, 'D7', 0);  
+    writeDigitalPin(a, 'D8', 1);
+
+  elseif first_digit==4
+    writeDigitalPin(a, 'D2', 0);
+    writeDigitalPin(a, 'D3', 1);
+    writeDigitalPin(a, 'D4', 1);  
+    writeDigitalPin(a, 'D5', 0);  
+    writeDigitalPin(a, 'D6', 0);  
+    writeDigitalPin(a, 'D7', 1);  
+    writeDigitalPin(a, 'D8', 1);
+
+  elseif first_digit==5
+    writeDigitalPin(a, 'D2', 1);
+    writeDigitalPin(a, 'D3', 0);
+    writeDigitalPin(a, 'D4', 1);  
+    writeDigitalPin(a, 'D5', 1);  
+    writeDigitalPin(a, 'D6', 0);  
+    writeDigitalPin(a, 'D7', 1);  
+    writeDigitalPin(a, 'D8', 1);
+
+  elseif first_digit==6
+    writeDigitalPin(a, 'D2', 1);
+    writeDigitalPin(a, 'D3', 0);
+    writeDigitalPin(a, 'D4', 1);  
+    writeDigitalPin(a, 'D5', 1);  
+    writeDigitalPin(a, 'D6', 1);  
+    writeDigitalPin(a, 'D7', 1);  
+    writeDigitalPin(a, 'D8', 1);
+
+  elseif first_digit==7
+    writeDigitalPin(a, 'D2', 1);
+    writeDigitalPin(a, 'D3', 1);
+    writeDigitalPin(a, 'D4', 1);  
+    writeDigitalPin(a, 'D5', 0);  
+    writeDigitalPin(a, 'D6', 0);  
+    writeDigitalPin(a, 'D7', 0);  
+    writeDigitalPin(a, 'D8', 0);
+
+  elseif first_digit==8
+    writeDigitalPin(a, 'D2', 1);
+    writeDigitalPin(a, 'D3', 1);
+    writeDigitalPin(a, 'D4', 1);  
+    writeDigitalPin(a, 'D5', 1);  
+    writeDigitalPin(a, 'D6', 1);  
+    writeDigitalPin(a, 'D7', 1);  
+    writeDigitalPin(a, 'D8', 1);
+
+  elseif first_digit==9
+    writeDigitalPin(a, 'D2', 1);
+    writeDigitalPin(a, 'D3', 1);
+    writeDigitalPin(a, 'D4', 1);  
+    writeDigitalPin(a, 'D5', 1);  
+    writeDigitalPin(a, 'D6', 0);  
+    writeDigitalPin(a, 'D7', 1);  
+    writeDigitalPin(a, 'D8', 1);
+  end
+
+  
+  if (first_digit ~= 0)
+      writeDigitalPin(a, 'D11', 0);
+      pause(0.2);
+      writeDigitalPin(a, 'D11', 1);
+  end
+
+  % printing second digit
+  if second_digit==0
+    writeDigitalPin(a, 'D2', 1);
+    writeDigitalPin(a, 'D3', 1);
+    writeDigitalPin(a, 'D4', 1);   
+    writeDigitalPin(a, 'D5', 1);  
+    writeDigitalPin(a, 'D6', 1);  
+    writeDigitalPin(a, 'D7', 0);  
+    writeDigitalPin(a, 'D8', 0);
+  elseif second_digit==1
+    writeDigitalPin(a, 'D2', 0);
+    writeDigitalPin(a, 'D3', 1);
+    writeDigitalPin(a, 'D4', 0);  
+    writeDigitalPin(a, 'D5', 1);  
+    writeDigitalPin(a, 'D6', 0);  
+    writeDigitalPin(a, 'D7', 0);  
+    writeDigitalPin(a, 'D8', 0);
+
+  elseif second_digit==2
+    writeDigitalPin(a, 'D2', 0);
+    writeDigitalPin(a, 'D3', 1);
+    writeDigitalPin(a, 'D4', 1);  
+    writeDigitalPin(a, 'D5', 0);  
+    writeDigitalPin(a, 'D6', 1);  
+    writeDigitalPin(a, 'D7', 0);  
+    writeDigitalPin(a, 'D8', 0);
+
+  elseif second_digit==3
+    writeDigitalPin(a, 'D2', 1);
+    writeDigitalPin(a, 'D3', 1);
+    writeDigitalPin(a, 'D4', 0);  
+    writeDigitalPin(a, 'D5', 1);  
+    writeDigitalPin(a, 'D6', 1);  
+    writeDigitalPin(a, 'D7', 0);  
+    writeDigitalPin(a, 'D8', 0);
+
+  elseif second_digit==4
+    writeDigitalPin(a, 'D2', 1);
+    writeDigitalPin(a, 'D3', 1);
+    writeDigitalPin(a, 'D4', 0);  
+    writeDigitalPin(a, 'D5', 0);  
+    writeDigitalPin(a, 'D6', 0);  
+    writeDigitalPin(a, 'D7', 1);  
+    writeDigitalPin(a, 'D8', 0);
+
+  elseif second_digit==5
+    writeDigitalPin(a, 'D2', 0);
+    writeDigitalPin(a, 'D3', 1);
+    writeDigitalPin(a, 'D4', 0);  
+    writeDigitalPin(a, 'D5', 0);  
+    writeDigitalPin(a, 'D6', 1);  
+    writeDigitalPin(a, 'D7', 1);  
+    writeDigitalPin(a, 'D8', 0);
+  elseif second_digit==6
+    writeDigitalPin(a, 'D2', 1);
+    writeDigitalPin(a, 'D3', 0);
+    writeDigitalPin(a, 'D4', 1);  
+    writeDigitalPin(a, 'D5', 0);  
+    writeDigitalPin(a, 'D6', 1);  
+    writeDigitalPin(a, 'D7', 0);  
+    writeDigitalPin(a, 'D8', 1);
+
+  elseif second_digit==7
+    writeDigitalPin(a, 'D2', 1);
+    writeDigitalPin(a, 'D3', 0);
+    writeDigitalPin(a, 'D4', 0);  
+    writeDigitalPin(a, 'D5', 0);  
+    writeDigitalPin(a, 'D6', 0);  
+    writeDigitalPin(a, 'D7', 1);  
+    writeDigitalPin(a, 'D8', 0);
+
+  elseif second_digit==8
+    writeDigitalPin(a, 'D2', 1);
+    writeDigitalPin(a, 'D3', 1);
+    writeDigitalPin(a, 'D4', 1);  
+    writeDigitalPin(a, 'D5', 1);  
+    writeDigitalPin(a, 'D6', 0);  
+    writeDigitalPin(a, 'D7', 1);  
+    writeDigitalPin(a, 'D8', 0);
+
+  elseif second_digit==9
+    writeDigitalPin(a, 'D2', 1);
+    writeDigitalPin(a, 'D3', 1);
+    writeDigitalPin(a, 'D4', 1);  
+    writeDigitalPin(a, 'D5', 1);  
+    writeDigitalPin(a, 'D6', 0);  
+    writeDigitalPin(a, 'D7', 1);  
+    writeDigitalPin(a, 'D8', 0);
+  end
+
+  writeDigitalPin(a, 'D13', 1);
+  pause(0.2);
+  writeDigitalPin(a, 'D13', 1);
+
+  if(thingSpeakDataTimer == 0)    
+      %sending data when timer is 0
+      thingSpeakWrite(thingSpeakChannelID, speed, 'WriteKey', thingSpeakWriteKey);
+      thingSpeakDataTimer = thingSpeakDataTimer + 1;
+  elseif(thingSpeakDataTimer > 15) % resetting timer to 0 after 15 seconds
+      thingSpeakDataTimer = 0;
+  else
+      thingSpeakDataTimer = thingSpeakDataTimer + 1;      
+  end
+end
+
