@@ -1,0 +1,101 @@
+from tensorflow.keras.datasets import mnist
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten, Dense, Dropout
+from tensorflow.keras.utils import to_categorical
+
+# Load MNIST dataset
+(X_train, y_train), (X_val, y_val) = mnist.load_data()
+
+# Preprocess data
+X_train = X_train.reshape(-1, 28, 28, 1) / 255.0
+X_val = X_val.reshape(-1, 28, 28, 1) / 255.0
+
+# Define number of classes and input shape
+num_classes = 10
+input_shape = (28, 28, 1)
+
+# One-hot encode labels
+y_train_encoded = to_categorical(y_train, num_classes)
+y_val_encoded = to_categorical(y_val, num_classes)
+
+# Build CNN model
+cnn_model = Sequential([
+  Conv2D(32, (3, 3), activation='relu', input_shape=input_shape),
+  MaxPooling2D(pool_size=(2, 2)),
+  Dropout(0.2),
+  Conv2D(64, (3, 3), activation='relu'),
+  MaxPooling2D(pool_size=(2, 2)),
+  Dropout(0.2),
+  Flatten(),
+  Dense(128, activation='relu'),
+  Dropout(0.5),
+  Dense(num_classes, activation='softmax')
+])
+
+# Compile the model
+cnn_model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
+
+
+cnn_model.fit(X_train, y_train_encoded, epochs=10, batch_size=64, validation_data=(X_val, y_val_encoded))
+
+print(cnn_model.summary())  # View model summary
+
+# Import required libraries
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten, Dense, Dropout
+from tensorflow.keras.utils import to_categorical
+import tensorflow as tf
+import numpy as np
+import matplotlib.pyplot as plt
+num_classes = 10  # Set this to the actual number of classes in your dataset
+input_shape = (28, 28, 1)  # Adjust this to match your data's input shape
+# Placeholder for X_train and X_val
+X_train = np.random.rand(1000, 28, 28, 1)  # Example random data for X_train
+y_train = np.random.randint(0, num_classes, size=(1000,))  # Example random labels for y_train
+X_val = np.random.rand(200, 28, 28, 1)  # Example random data for X_val
+y_val = np.random.randint(0, num_classes, size=(200,))  # Example random labels for y_val
+
+# Convert labels to categorical format
+y_train_cat = to_categorical(y_train, num_classes)
+y_val_cat = to_categorical(y_val, num_classes)
+
+# Define the CNN model
+cnn_model = Sequential()
+
+# Convolutional layers with dropout and pooling
+cnn_model.add(Conv2D(32, (3, 3), activation='relu', input_shape=input_shape))
+cnn_model.add(MaxPooling2D((2, 2)))
+cnn_model.add(Dropout(0.2))
+
+cnn_model.add(Conv2D(64, (3, 3), activation='relu'))
+cnn_model.add(MaxPooling2D((2, 2)))
+cnn_model.add(Dropout(0.2))
+
+# Flatten and add dense layers
+cnn_model.add(Flatten())
+cnn_model.add(Dense(128, activation='relu'))
+cnn_model.add(Dropout(0.5))
+
+# Output layer
+cnn_model.add(Dense(num_classes, activation='softmax'))
+
+# Compile the model
+cnn_model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=0.0005),
+                  loss='categorical_crossentropy',
+                  metrics=['accuracy'])
+
+# Train the model
+training_history = cnn_model.fit(X_train, y_train_cat,
+                                 epochs=15,
+                                 batch_size=32,
+                                 validation_data=(X_val, y_val_cat))
+
+# Plot training and validation accuracy
+plt.figure()
+plt.plot(training_history.history['accuracy'], label='Training Accuracy')
+plt.plot(training_history.history['val_accuracy'], label='Validation Accuracy')
+plt.title('Model Training vs Validation Accuracy')
+plt.xlabel('Epochs')
+plt.ylabel('Accuracy')
+plt.legend()
+plt.show()
